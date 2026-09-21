@@ -104,7 +104,7 @@ whatweb http://10.20.2.9
 http://10.20.2.9 [200 OK] Apache[2.4.68], Country[RESERVED][ZZ], HTTPServer[Unix][Apache/2.4.68 (Unix)], IP[10.20.2.9], Title[It works! Apache httpd]
 ```
 
-![](Pasted_image_20260916222917.png)
+![](media/Pasted_image_20260916222917.png)
 
 Puerto 8080:
 ```bash
@@ -116,7 +116,7 @@ http://10.20.2.9:8080 [302 Found] Country[RESERVED][ZZ], HTML5, HTTPServer[Werkz
 http://10.20.2.9:8080/login [200 OK] Country[RESERVED][ZZ], HTML5, HTTPServer[Werkzeug/3.1.8 Python/3.9.25], IP[10.20.2.9], Python[3.9.25], Script, Title[IoT Dashboard], Werkzeug[3.1.8]
 ```
 
-![](Pasted_image_20260916223013.png)
+![](media/Pasted_image_20260916223013.png)
 
 Revisamos las cabeceras con `curl`.
 
@@ -137,7 +137,7 @@ Connection: close
 
 Con esto podemos ver que el servidor responde y solicita una Cookie de sesión para autenticar la cuenta, cookie que se genera al ingresar el usuario y contraseña, los cuales si analizamos el codigo de la pagina se pasan mediante un formulario a través del método POST.
 
-![](Pasted_image_20260916231408.png)
+![](media/Pasted_image_20260916231408.png)
 
 En este punto podemos probar con `hydra` para realizar un ataque de fuerza bruta partiendo del supuesto que existe un usuario `admin`, probando con contraseñas comunes, tratando de aprovechar una mala configuración de la cuenta de administrador, para esto creamos un pequeño diccionario con contraseñas comunes, se puede buscar en el navegador las contraseñas mas comunes para el usuario `admin`. para crear el diccionario usamos `cat`.
 
@@ -182,7 +182,7 @@ Hydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2026-09-17 01:28:
 
 En este resumen de la salida de `hydra`, podemos ver que se ha encontrado una coincidencia para el usuario `admin`, con la contraseña `admin123`. Con esto podemos probar en el formulario para tratr de acceder a la cuenta de administrador.
 
-![](Pasted_image_20260916233534.png)
+![](media/Pasted_image_20260916233534.png)
 
 Se comprueba que con las credenciales obtenidas de `hydra` se puede acceder, si se navega en el menú lateral, encontraremos que en la opción de `alertas` se tiene un formulario con una posible vulnerabilidad ya que solicita utilizar variables `jinja` en el envío de la forma `{{ sensor }}`, esto puede permitir aprovechar la vulnerabilidad `SSTI (Server-Side Template Injection)`. Se puede hacer una prueba rápida con:
 
@@ -190,7 +190,7 @@ Se comprueba que con las credenciales obtenidas de `hydra` se puede acceder, si 
 {{ 9*7 }}
 ```
 
-![](Pasted_image_20260916234211.png)
+![](media/Pasted_image_20260916234211.png)
 
 El código se ejecuta correctamente, así que podemos enumerar directorios y archivos para darnos una idea de donde estamos.
 
