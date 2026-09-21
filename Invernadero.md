@@ -285,7 +285,7 @@ drwxr-xr-x    3 root     root          4096 Aug 29 23:28 ..
 
 ```
 
-Encontramos aquí algo interesante, tres archivos, dos ocultos, el historial de la terminal: `.bash_hitory`, otro muy sospechoso al que parece ser, le modificaron el nombre `.ash_history`, y un tercero `user.txt`, puede ser una de las ==banderas (`flag`)== que estamos buscando.
+Encontramos aquí algo interesante, tres archivos, dos ocultos, el historial de la terminal: `.bash_hitory`, otro muy sospechoso al que parece ser, le modificaron el nombre `.ash_history`, y un tercero `user.txt`, puede ser una de las <mark>banderas (`flag`)</mark> que estamos buscando.
 
 Antes de revisar los archivos encontrados podemos ver comandos con permisos SUID para ver si hay alguno que se pueda ejecutar como `root` y secuestrarlo para una escalada de privilegios.
 
@@ -447,4 +447,4 @@ drwx------    2 root     root          4096 Aug 10 11:38 .ssh
 -rw-------    1 root     root            36 Aug 29 22:26 root.txt
 ```
 
-Valdría la pena revisar `root.txt`, quizá sea la segunda ==bandera (`flag`)== que estamos buscando.
+Valdría la pena revisar `root.txt`, quizá sea la segunda <mark>bandera (`flag`)</mark> que estamos buscando.
