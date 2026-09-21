@@ -83,7 +83,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 353.5
   },
   "right": {
     "id": "2431312f0cf38435",
@@ -185,16 +185,19 @@
       "daily-notes:Abrir la nota de hoy": false,
       "templates:Insertar plantilla": false,
       "command-palette:Abrir paleta de comandos": false,
-      "bases:Crear nueva base": false
+      "bases:Crear nueva base": false,
+      "obsidian-git:Open Git source control": false
     }
   },
   "active": "7275f74e8165d53c",
   "lastOpenFiles": [
+    "media/Pasted image 20260916222917.png",
+    "Invernadero.md",
+    "media/Pasted.md",
     "media/Pasted image 20260916234211.png",
     "media/Pasted image 20260916233534.png",
     "media/Pasted image 20260916231408.png",
     "media/Pasted image 20260916223013.png",
-    "media/Pasted image 20260916222917.png",
     "media",
     "Nueva carpeta"
   ]
