@@ -1,2 +1,4 @@
 # Ignorar por completo la configuración interna de Obsidian
 .obsidian/
+
+.trash/
