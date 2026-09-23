@@ -180,7 +180,7 @@ para obtener el código de la `shell inversa`.
 
 Y en la sección de `shell` en la pestaña de `capabilities` tenemos
 
-![[media/20260923105031.png]]
+![](media/20260923105031.png)
 
 Ejecutamos
 
