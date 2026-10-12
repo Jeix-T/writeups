@@ -79,7 +79,7 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 Un recurso que debemos revisar es el servicio web ejecutándose en el puerto 8080. Podemos revisar el navegador para ver si encontramos más pistas.
 
-![](Pasted_image_20260923160654.png)
+![](assets/media/Pasted_image_20260923160654.png)
 
 Obtenemos este portal, al parecer esta en otro idioma, lo que podemos hacer es inspeccionar el código de la página para tratar de buscar pistas en comentarios o secciones ocultas. 
 
