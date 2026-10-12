@@ -74,11 +74,11 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 Como podemos ver, `nmap` ha encontrado que se puede acceder a la carpeta `./git`, vamos a comprobar en el navegador que se encuentra en el puerto `80`.
 
-![](media/Pasted_image_20261001144939.png)
+![](Pasted_image_20261001144939.png)
 
 En el navegador encontramos algo como esto, sin embargo si vamos a la URL encontrada por `nmap`: `10.20.2.14:80/.git/`, vemos que marca un error `404`:
 
-![](media/Pasted_image_20261001145115.png)
+![](Pasted_image_20261001145115.png)
 
 Ejecutamos `dirsearch` para ver si encontramos rutas o archivos de acceso.
 
@@ -97,7 +97,7 @@ Target: http://10.20.2.14/
 
 Encontramos que tenemos acceso a la ruta `/dev/` y al archivo `robots.txt`, revisemos lo que se encuentra en ambos recursos. En la ruta `http://10.20.2.14/dev/`.
 
-![](media/Pasted_image_20261001152639.png)
+![](Pasted_image_20261001152639.png)
 
 De este mensaje obtenemos información importante:
 - EL monitoreo real se movió al subdominio: <mark>http://monitor.pulse.hmv</mark>
@@ -124,7 +124,7 @@ echo "10.20.2.14 http://monitor.pulse.hmv" | tee -a /etc/hosts > /dev/null
 
 Accedamos ahora a `http://monitor.pulse.hmv`.
 
-![](media/Pasted_image_20261001145502.png)
+![](Pasted_image_20261001145502.png)
 
 Al tener acceso a este subdominio podemos realizar una enumeración de archivos y directorios con `dirsearch` utilizando la opción `-x 404` para evitar todos los mensajes de "pagina no encontrada".
 
@@ -197,7 +197,7 @@ Como vemos de aquí obtenemos:
 
 Si recordamos en el aviso que encontramos previamente indica que `/diagnostics` requiere de un TOKEN de autorización, veamos si este token encontrado nos  es de utilidad. accedemos a `http://monitor.pulse.hmv/diagnostics`.
 
-![](media/Pasted_image_20261001154141.png)
+![](Pasted_image_20261001154141.png)
 
 Efectivamente vemos que el formulario solicita un token, pero también vemos que permite el envío de variables `jinja`, lo que nos permite ver si podemos ejecutar código y tratar de obtener una shell inversa para conectarnos a la maquina victima, realizamos una prueba enviando: 
 
@@ -205,7 +205,7 @@ Efectivamente vemos que el formulario solicita un token, pero también vemos que
 {{6*3}}
 ```
 
-![](media/Pasted_image_20261001154741.png)
+![](Pasted_image_20261001154741.png)
 
 Vemos que se ejecuta el código de forma satisfactoria, tratamos de ver si devuelve el id del usuario que utiliza el sitio web.
 
@@ -213,7 +213,7 @@ Vemos que se ejecuta el código de forma satisfactoria, tratamos de ver si devue
 {{os.popen("id").read()}}
 ```
 
-![](media/Pasted_image_20261001155013.png)
+![](Pasted_image_20261001155013.png)
 
 Como vemos da un error, seguramente el sistema esta configurado para detectar este tipo de intrusiones, de echo en el archivo `app.py` podemos ver el siguiente fragmento que confirma una lista negra definida para un `Filter`, que evalúa lo que se envía por el formulario.
 
